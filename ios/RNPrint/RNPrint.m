@@ -17,6 +17,11 @@ RCT_EXPORT_MODULE();
 RCT_EXPORT_METHOD(print:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
+    NSArray *urlItems;
+
+    if (options[@"urlItems"]){
+        urlItems = [RCTConvert NSArray:options[@"urlItems"]];
+    }
 
     if (options[@"filePath"]){
         _filePath = [RCTConvert NSString:options[@"filePath"]];
@@ -34,9 +39,8 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
     if(options[@"isLandscape"]) {
         _isLandscape = [[RCTConvert NSNumber:options[@"isLandscape"]] boolValue];
     }
-
-    if ((_filePath && _htmlString) || (_filePath == nil && _htmlString == nil)) {
-        reject(RCTErrorUnspecified, nil, RCTErrorWithMessage(@"Must provide either `html` or `filePath`. Both are either missing or passed together"));
+    if ((_filePath && _htmlString && urlItems) || (_filePath == nil && _htmlString == nil && urlItems == nil)) {
+        reject(RCTErrorUnspecified, nil, RCTErrorWithMessage(@"Must provide either `html` or `filePath` or `urlItems`."));
     }
 
     NSData *printData;
@@ -45,16 +49,19 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
     if (candidateURL && candidateURL.scheme && candidateURL.host)
         isValidURL = YES;
 
+    NSMutableArray *printingItems;
+
     if (isValidURL) {
         // TODO: This needs updated to use NSURLSession dataTaskWithURL:completionHandler:
         printData = [NSData dataWithContentsOfURL:candidateURL];
+    } else if (urlItems) {
+        printingItems = [[NSMutableArray alloc] init];
+        for(int i = 0; i < [urlItems count]; i++) {
+            NSURL *url = [NSURL URLWithString: urlItems[i]];
+            [printingItems addObject:[NSData dataWithContentsOfURL:url]];
+        }
     } else {
         printData = [NSData dataWithContentsOfFile: _filePath];
-    }
-
-    if(!_htmlString && ![UIPrintInteractionController canPrintData:printData]) {
-        reject(RCTErrorUnspecified, nil, RCTErrorWithMessage(@"Unable to print this filePath"));
-        return;
     }
 
     UIPrintInteractionController *printInteractionController = [UIPrintInteractionController sharedPrintController];
@@ -75,7 +82,7 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
         UIMarkupTextPrintFormatter *formatter = [[UIMarkupTextPrintFormatter alloc] initWithMarkupText:_htmlString];
         printInteractionController.printFormatter = formatter;
     } else {
-        printInteractionController.printingItem = printData;
+        printInteractionController.printingItems = printingItems;
     }
 
     // Completion handler
@@ -85,7 +92,7 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
             NSLog(@"Printing could not complete because of error: %@", error);
             reject(RCTErrorUnspecified, nil, RCTErrorWithMessage(error.description));
         } else {
-            resolve(completed ? printInfo.jobName : nil);
+            resolve(nil);
         }
     };
 
