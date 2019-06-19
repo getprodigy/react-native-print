@@ -58,7 +58,10 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
         printingItems = [[NSMutableArray alloc] init];
         for(int i = 0; i < [urlItems count]; i++) {
             NSURL *url = [NSURL URLWithString: urlItems[i]];
-            [printingItems addObject:[NSData dataWithContentsOfURL:url]];
+            NSData *data = [NSData dataWithContentsOfURL:url];
+            if (data) {
+                [printingItems addObject:data];
+            }
         }
     } else {
         printData = [NSData dataWithContentsOfFile: _filePath];
@@ -71,7 +74,6 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
     UIPrintInfo *printInfo = [UIPrintInfo printInfo];
 
     printInfo.outputType = UIPrintInfoOutputGeneral;
-    printInfo.jobName = [_filePath lastPathComponent];
     printInfo.duplex = UIPrintInfoDuplexLongEdge;
     printInfo.orientation = _isLandscape? UIPrintInfoOrientationLandscape: UIPrintInfoOrientationPortrait;
 
