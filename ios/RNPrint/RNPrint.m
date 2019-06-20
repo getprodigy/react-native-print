@@ -18,34 +18,39 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     NSArray *urlItems;
+    NSString *filePath;
+    NSString *htmlString;
+    NSURL *printerURL;
+    UIPrinter *pickedPrinter;
+    BOOL isLandscape = false;
 
     if (options[@"urlItems"]){
         urlItems = [RCTConvert NSArray:options[@"urlItems"]];
     }
 
     if (options[@"filePath"]){
-        _filePath = [RCTConvert NSString:options[@"filePath"]];
+        filePath = [RCTConvert NSString:options[@"filePath"]];
     }
 
     if (options[@"html"]){
-        _htmlString = [RCTConvert NSString:options[@"html"]];
+        htmlString = [RCTConvert NSString:options[@"html"]];
     }
 
     if (options[@"printerURL"]){
-        _printerURL = [NSURL URLWithString:[RCTConvert NSString:options[@"printerURL"]]];
-        _pickedPrinter = [UIPrinter printerWithURL:_printerURL];
+        printerURL = [NSURL URLWithString:[RCTConvert NSString:options[@"printerURL"]]];
+        pickedPrinter = [UIPrinter printerWithURL:printerURL];
     }
 
     if(options[@"isLandscape"]) {
-        _isLandscape = [[RCTConvert NSNumber:options[@"isLandscape"]] boolValue];
+        isLandscape = [[RCTConvert NSNumber:options[@"isLandscape"]] boolValue];
     }
-    if ((_filePath && _htmlString && urlItems) || (_filePath == nil && _htmlString == nil && urlItems == nil)) {
+    if ((filePath && htmlString && urlItems) || (filePath == nil && htmlString == nil && urlItems == nil)) {
         reject(RCTErrorUnspecified, nil, RCTErrorWithMessage(@"Must provide either `html` or `filePath` or `urlItems`."));
     }
 
     NSData *printData;
     BOOL isValidURL = NO;
-    NSURL *candidateURL = [NSURL URLWithString: _filePath];
+    NSURL *candidateURL = [NSURL URLWithString: filePath];
     if (candidateURL && candidateURL.scheme && candidateURL.host)
         isValidURL = YES;
 
@@ -64,7 +69,7 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
             }
         }
     } else {
-        printData = [NSData dataWithContentsOfFile: _filePath];
+        printData = [NSData dataWithContentsOfFile: filePath];
     }
 
     UIPrintInteractionController *printInteractionController = [UIPrintInteractionController sharedPrintController];
@@ -75,13 +80,13 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
 
     printInfo.outputType = UIPrintInfoOutputGeneral;
     printInfo.duplex = UIPrintInfoDuplexLongEdge;
-    printInfo.orientation = _isLandscape? UIPrintInfoOrientationLandscape: UIPrintInfoOrientationPortrait;
+    printInfo.orientation = isLandscape? UIPrintInfoOrientationLandscape: UIPrintInfoOrientationPortrait;
 
     printInteractionController.printInfo = printInfo;
     printInteractionController.showsPageRange = YES;
 
-    if (_htmlString) {
-        UIMarkupTextPrintFormatter *formatter = [[UIMarkupTextPrintFormatter alloc] initWithMarkupText:_htmlString];
+    if (htmlString) {
+        UIMarkupTextPrintFormatter *formatter = [[UIMarkupTextPrintFormatter alloc] initWithMarkupText:htmlString];
         printInteractionController.printFormatter = formatter;
     } else {
         printInteractionController.printingItems = printingItems;
@@ -98,8 +103,8 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
         }
     };
 
-    if (_pickedPrinter) {
-        [printInteractionController printToPrinter:_pickedPrinter completionHandler:completionHandler];
+    if (pickedPrinter) {
+        [printInteractionController printToPrinter:pickedPrinter completionHandler:completionHandler];
     } else if([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) { // iPad
         UIView *view = [[UIApplication sharedApplication] keyWindow].rootViewController.view;
         [printInteractionController presentFromRect:view.frame inView:view animated:YES completionHandler:completionHandler];
