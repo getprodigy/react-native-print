@@ -17,15 +17,15 @@ RCT_EXPORT_MODULE();
 RCT_EXPORT_METHOD(print:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
-    NSArray *urlItems;
+    NSArray *pathItems;
     NSString *filePath;
     NSString *htmlString;
     NSURL *printerURL;
     UIPrinter *pickedPrinter;
     BOOL isLandscape = false;
 
-    if (options[@"urlItems"]){
-        urlItems = [RCTConvert NSArray:options[@"urlItems"]];
+    if (options[@"pathItems"]){
+        pathItems = [RCTConvert NSArray:options[@"pathItems"]];
     }
 
     if (options[@"filePath"]){
@@ -44,7 +44,7 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
     if(options[@"isLandscape"]) {
         isLandscape = [[RCTConvert NSNumber:options[@"isLandscape"]] boolValue];
     }
-    if ((filePath && htmlString && urlItems) || (filePath == nil && htmlString == nil && urlItems == nil)) {
+    if ((filePath && htmlString && pathItems) || (filePath == nil && htmlString == nil && pathItems == nil)) {
         reject(RCTErrorUnspecified, nil, RCTErrorWithMessage(@"Must provide either `html` or `filePath` or `urlItems`."));
     }
 
@@ -59,11 +59,10 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
     if (isValidURL) {
         // TODO: This needs updated to use NSURLSession dataTaskWithURL:completionHandler:
         printData = [NSData dataWithContentsOfURL:candidateURL];
-    } else if (urlItems) {
+    } else if (pathItems) {
         printingItems = [[NSMutableArray alloc] init];
-        for(int i = 0; i < [urlItems count]; i++) {
-            NSURL *url = [NSURL URLWithString: urlItems[i]];
-            NSData *data = [NSData dataWithContentsOfURL:url];
+        for(int i = 0; i < [pathItems count]; i++) {
+            NSData *data = [NSData dataWithContentsOfFile: pathItems[i]];
             if (data) {
                 [printingItems addObject:data];
             }
@@ -84,6 +83,7 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
 
     printInteractionController.printInfo = printInfo;
     printInteractionController.showsPageRange = YES;
+    printInteractionController.showsNumberOfCopies = NO;
 
     if (htmlString) {
         UIMarkupTextPrintFormatter *formatter = [[UIMarkupTextPrintFormatter alloc] initWithMarkupText:htmlString];
