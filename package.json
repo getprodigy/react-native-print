@@ -10,6 +10,7 @@
     "react",
     "native"
   ],
+  "homepage": "https://github.com/christopherdro/react-native-print#readme",
   "repository": {
     "type": "git",
     "url": "github:christopherdro/react-native-print"
